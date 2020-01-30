@@ -9,7 +9,8 @@ COPY . .
 RUN apk update && \
     apk add nodejs npm python make curl g++
 
-
+RUN chgrp -R root /var/cache/nginx /var/run /var/log/nginx && \
+    chmod -R 770 /var/cache/nginx /var/run /var/log/nginx
 # Build Application
 RUN npm install
 RUN ./node_modules/@angular/cli/bin/ng build --configuration=${BUILD_CONFIG}
@@ -19,8 +20,7 @@ RUN cp -r ./dist/. /usr/share/nginx/html
 COPY ./openshift/nginx/nginx.conf /etc/nginx/nginx.conf
 COPY ./openshift/nginx/conf.d/default.conf /etc/nginx/conf.d/default.conf
 
-RUN chgrp -R root /var/cache/nginx /var/run /var/log/nginx && \
-    chmod -R 770 /var/cache/nginx /var/run /var/log/nginx
+
 
 EXPOSE 8080
 
