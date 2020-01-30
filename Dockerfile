@@ -1,19 +1,27 @@
-FROM centos:7
-MAINTAINER Erik Jacobs <erikmjacobs@gmail.com>
+FROM nginx:alpine
 
-USER root
-EXPOSE 3000
+LABEL maintainer="ReliefMelone"
 
-ENV GRAFANA_VERSION="4.3.1"
+WORKDIR /app
+COPY . .
 
-ADD root /
-RUN yum -y install https://s3-us-west-2.amazonaws.com/grafana-releases/release/grafana-"$GRAFANA_VERSION"-1.x86_64.rpm \
-    && yum clean all
-COPY run.sh /usr/share/grafana/
-RUN /usr/bin/fix-permissions /usr/share/grafana \
-    && /usr/bin/fix-permissions /etc/grafana \
-    && /usr/bin/fix-permissions /var/lib/grafana \
-    && /usr/bin/fix-permissions /var/log/grafana 
+# Install node.js
+RUN apk update && \
+    apk add nodejs npm python make curl g++
 
-WORKDIR /usr/share/grafana
-ENTRYPOINT ["./run.sh"]
+
+# Build Application
+RUN npm install
+RUN ./node_modules/@angular/cli/bin/ng build --configuration=${BUILD_CONFIG}
+RUN cp -r ./dist/. /usr/share/nginx/html
+
+# Configure NGINX
+COPY ./openshift/nginx/nginx.conf /etc/nginx/nginx.conf
+COPY ./openshift/nginx/conf.d/default.conf /etc/nginx/conf.d/default.conf
+
+RUN chgrp -R root /var/cache/nginx /var/run /var/log/nginx && \
+    chmod -R 770 /var/cache/nginx /var/run /var/log/nginx
+
+EXPOSE 8080
+
+CMD ["nginx", "-g", "daemon off;"]
